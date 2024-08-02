@@ -456,7 +456,7 @@ contract L2Genesis is Deployer {
             console.log("Governance not enabled, skipping setting GovernanceDelegation");
             return;
         }
-        
+
         address impl = _setImplementationCode(Predeploys.GOVERNANCE_DELEGATION);
         vm.etch(Predeploys.GOVERNANCE_DELEGATION, impl.code);
 

@@ -495,7 +495,7 @@ contract L2Genesis is Deployer {
     ///         When performing a regular user-initiated contract-creation of a preinstall,
     ///         the creation will fail (but nonce will be bumped and not blocked).
     ///         The preinstalls themselves are all inserted with a nonce of 1, reflecting regular user execution.
-    function setPreinstalls() internal {
+    function setPreinstalls() public {
         _setPreinstallCode(Preinstalls.MultiCall3);
         _setPreinstallCode(Preinstalls.Create2Deployer);
         _setPreinstallCode(Preinstalls.Safe_v130);

@@ -255,6 +255,7 @@ services:
       - "6062:6060"
       - "7302:7300"
       - "6546:8545"
+    # proposer addr: 0x71b4a2d9B91726bdb5849D928967A1654D7F3de7
     environment:
       OP_PROPOSER_L1_ETH_RPC: http://l1:8545
       OP_PROPOSER_ROLLUP_RPC: http://op-node-a:8545
@@ -283,6 +284,7 @@ services:
       - "6062:6060"
       - "7302:7300"
       - "6546:8545"
+    # proposer addr: 0x8c408c9ce6718F4a3AFa7860f2E7B190B25fBDfA
     environment:
       OP_PROPOSER_L1_ETH_RPC: http://l1:8545
       OP_PROPOSER_ROLLUP_RPC: http://op-node-b:8545
@@ -312,6 +314,7 @@ services:
       - "6061:6060"
       - "7301:7300"
       - "6545:8545"
+    # batcher addr: 0xCA55aC8514b25C660151a8AE0c90f116DF160daa
     environment:
       OP_BATCHER_L1_ETH_RPC: http://l1:8545
       OP_BATCHER_L2_ETH_RPC: http://l2-a:8545
@@ -343,6 +346,7 @@ services:
       - "6061:6060"
       - "7301:7300"
       - "6545:8545"
+    # batcher addr: 0x252a3336Fb2A4352D1bD3b139f4e540AA45236bd
     environment:
       OP_BATCHER_L1_ETH_RPC: http://l1:8545
       OP_BATCHER_L2_ETH_RPC: http://l2-b:8545

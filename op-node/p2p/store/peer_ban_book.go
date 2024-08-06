@@ -49,12 +49,8 @@ type peerBanBook struct {
 	book *recordsBook[peer.ID, *peerBanRecord]
 }
 
-func newPeerBanRecord() *peerBanRecord {
-	return new(peerBanRecord)
-}
-
 func newPeerBanBook(ctx context.Context, logger log.Logger, clock clock.Clock, store ds.Batching) (*peerBanBook, error) {
-	book, err := newRecordsBook[peer.ID, *peerBanRecord](ctx, logger, clock, store, peerBanCacheSize, peerBanRecordExpiration, peerBanExpirationsBase, newPeerBanRecord, peerIDKey)
+	book, err := newRecordsBook[peer.ID, *peerBanRecord](ctx, logger, clock, store, peerBanCacheSize, peerBanRecordExpiration, peerBanExpirationsBase, genNew, peerIDKey)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +76,8 @@ func (d *peerBanBook) SetPeerBanExpiration(id peer.ID, expirationTime time.Time)
 	if expirationTime == (time.Time{}) {
 		return d.book.deleteRecord(id)
 	}
+	d.book.Lock()
+	defer d.book.Unlock()
 	_, err := d.book.SetRecord(id, peerBanUpdate(expirationTime))
 	return err
 }

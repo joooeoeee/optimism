@@ -49,16 +49,12 @@ type ipBanBook struct {
 	book *recordsBook[string, *ipBanRecord]
 }
 
-func newIPBanRecord() *ipBanRecord {
-	return new(ipBanRecord)
-}
-
 func ipKey(ip string) ds.Key {
 	return ds.NewKey(ip)
 }
 
 func newIPBanBook(ctx context.Context, logger log.Logger, clock clock.Clock, store ds.Batching) (*ipBanBook, error) {
-	book, err := newRecordsBook[string, *ipBanRecord](ctx, logger, clock, store, ipBanCacheSize, ipBanRecordExpiration, ipBanExpirationsBase, newIPBanRecord, ipKey)
+	book, err := newRecordsBook[string, *ipBanRecord](ctx, logger, clock, store, ipBanCacheSize, ipBanRecordExpiration, ipBanExpirationsBase, genNew, ipKey)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +80,9 @@ func (d *ipBanBook) SetIPBanExpiration(ip net.IP, expirationTime time.Time) erro
 	if expirationTime == (time.Time{}) {
 		return d.book.deleteRecord(ip.To16().String())
 	}
+	// Should these move up to include the delete?
+	d.book.Lock()
+	defer d.book.Unlock()
 	_, err := d.book.SetRecord(ip.To16().String(), ipBanUpdate(expirationTime))
 	return err
 }

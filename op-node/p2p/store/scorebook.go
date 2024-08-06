@@ -49,16 +49,12 @@ type scoreBook struct {
 	book *recordsBook[peer.ID, *scoreRecord]
 }
 
-func newScoreRecord() *scoreRecord {
-	return new(scoreRecord)
-}
-
 func peerIDKey(id peer.ID) ds.Key {
 	return ds.NewKey(base32.RawStdEncoding.EncodeToString([]byte(id)))
 }
 
 func newScoreBook(ctx context.Context, logger log.Logger, clock clock.Clock, store ds.Batching, retain time.Duration) (*scoreBook, error) {
-	book, err := newRecordsBook[peer.ID, *scoreRecord](ctx, logger, clock, store, scoreCacheSize, retain, scoresBase, newScoreRecord, peerIDKey)
+	book, err := newRecordsBook[peer.ID, *scoreRecord](ctx, logger, clock, store, scoreCacheSize, retain, scoresBase, genNew, peerIDKey)
 	if err != nil {
 		return nil, err
 	}
@@ -70,6 +66,8 @@ func (d *scoreBook) startGC() {
 }
 
 func (d *scoreBook) GetPeerScores(id peer.ID) (PeerScores, error) {
+	d.book.RWMutex.RLock()
+	defer d.book.RWMutex.RUnlock()
 	record, err := d.book.getRecord(id)
 	if err == ErrUnknownRecord {
 		return PeerScores{}, nil // return zeroed scores by default
@@ -89,6 +87,8 @@ func (d *scoreBook) GetPeerScore(id peer.ID) (float64, error) {
 }
 
 func (d *scoreBook) SetScore(id peer.ID, diff ScoreDiff) (PeerScores, error) {
+	d.book.Lock()
+	defer d.book.Unlock()
 	v, err := d.book.SetRecord(id, diff)
 	return v.PeerScores, err
 }

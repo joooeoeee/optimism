@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/log"
 
@@ -22,7 +23,7 @@ func TestConsole(t *testing.T) {
 	bob := testutils.RandomAddress(rng)
 	c := &ConsolePrecompile{
 		logger: logger,
-		sender: sender,
+		sender: func() common.Address { return sender },
 	}
 	p, err := NewPrecompile[*ConsolePrecompile](c)
 	require.NoError(t, err)

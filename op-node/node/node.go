@@ -401,7 +401,22 @@ func (n *OpNode) initL2(ctx context.Context, cfg *Config) error {
 	} else {
 		n.safeDB = safedb.Disabled
 	}
-	n.l2Driver = driver.NewDriver(&cfg.Driver, &cfg.Rollup, n.l2Source, n.l1Source, n.beacon, n, n, n.log, n.metrics, cfg.ConfigPersistence, n.safeDB, &cfg.Sync, sequencerConductor, plasmaDA)
+	n.l2Driver = driver.NewDriver(
+		&cfg.Driver,
+		&cfg.Rollup,
+		n.l2Source,
+		n.l1Source,
+		n.beacon,
+		n,
+		n,
+		n.log,
+		n.metrics,
+		cfg.ConfigPersistence,
+		n.safeDB,
+		&cfg.Sync,
+		sequencerConductor,
+		plasmaDA,
+	)
 	return nil
 }
 
@@ -448,6 +463,7 @@ func (n *OpNode) initHeartbeat(cfg *Config) {
 	if cfg.P2P.Disabled() {
 		peerID = "disabled"
 	} else {
+		// Is there a check for p2p enabled missing here? Is it implied that p2p is enabled if there's a heartbeat?
 		peerID = n.P2P().Host().ID().String()
 	}
 
@@ -498,15 +514,14 @@ func (n *OpNode) initP2P(ctx context.Context, cfg *Config) error {
 	return nil
 }
 
-func (n *OpNode) initP2PSigner(ctx context.Context, cfg *Config) error {
+func (n *OpNode) initP2PSigner(ctx context.Context, cfg *Config) (err error) {
 	// the p2p signer setup is optional
 	if cfg.P2PSigner == nil {
-		return nil
+		return
 	}
 	// p2pSigner may still be nil, the signer setup may not create any signer, the signer is optional
-	var err error
 	n.p2pSigner, err = cfg.P2PSigner.SetupSigner(ctx)
-	return err
+	return
 }
 
 func (n *OpNode) Start(ctx context.Context) error {
@@ -599,7 +614,11 @@ func (n *OpNode) OnUnsafeL2Payload(ctx context.Context, from peer.ID, envelope *
 func (n *OpNode) RequestL2Range(ctx context.Context, start, end eth.L2BlockRef) error {
 	if n.p2pNode != nil && n.p2pNode.AltSyncEnabled() {
 		if unixTimeStale(start.Time, 12*time.Hour) {
-			n.log.Debug("ignoring request to sync L2 range, timestamp is too old for p2p", "start", start, "end", end, "start_time", start.Time)
+			n.log.Debug(
+				"ignoring request to sync L2 range, timestamp is too old for p2p",
+				"start", start,
+				"end", end,
+				"start_time", start.Time)
 			return nil
 		}
 		return n.p2pNode.RequestL2Range(ctx, start, end)

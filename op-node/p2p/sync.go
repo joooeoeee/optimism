@@ -619,6 +619,9 @@ func (s *SyncClient) peerLoop(ctx context.Context, id peer.ID) {
 				// If we hit an error, then count it as many requests.
 				// We'd like to avoid making more requests for a while, so back off.
 				if err := rl.WaitN(ctx, clientErrRateCost); err != nil {
+					if ctx.Err() == nil {
+						log.Error("waiting to request blocks from peer", "err", err)
+					}
 					return
 				}
 			} else {
@@ -653,8 +656,9 @@ func (r requestResultErr) ResultCode() byte {
 func (s *SyncClient) doRequest(ctx context.Context, id peer.ID, expectedBlockNum uint64) error {
 	// open stream to peer
 	reqCtx, reqCancel := context.WithTimeout(ctx, streamTimeout)
+	// Prevent memory leak to panic, since this function is wrapped by a panic handler.
+	defer reqCancel()
 	str, err := s.newStreamFn(reqCtx, id, s.payloadByNumber)
-	reqCancel()
 	if err != nil {
 		return fmt.Errorf("failed to open stream: %w", err)
 	}
@@ -674,6 +678,7 @@ func (s *SyncClient) doRequest(ctx context.Context, id peer.ID, expectedBlockNum
 	// Limit input, as well as output.
 	// Compression may otherwise continue to read ignored data for a small output,
 	// or output more data than desired (zip-bomb)
+	// TODO: This should error when exceeding the limit rather than io.EOF
 	r := io.LimitReader(str, maxGossipSize)
 	var result [1]byte
 	if _, err := io.ReadFull(r, result[:]); err != nil {

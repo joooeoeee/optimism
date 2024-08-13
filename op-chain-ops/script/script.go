@@ -46,12 +46,18 @@ type Host struct {
 	console    *Precompile[*ConsolePrecompile]
 
 	callStack []CallFrame
+	scope     tracing.OpContext // nil if EVM not started
+
+	envVars map[string]string
+	labels  map[common.Address]string
 }
 
 func NewHost(logger log.Logger, fs *foundry.ArtifactsFS, executionContext Context) *Host {
 	h := &Host{
-		log: logger,
-		af:  fs,
+		log:     logger,
+		af:      fs,
+		envVars: make(map[string]string),
+		labels:  make(map[common.Address]string),
 	}
 
 	h.chainCfg = &params.ChainConfig{
@@ -130,7 +136,7 @@ func NewHost(logger log.Logger, fs *foundry.ArtifactsFS, executionContext Contex
 		OnTxEnd:           nil,
 		OnEnter:           h.onEnter,
 		OnExit:            h.onExit,
-		OnOpcode:          nil,
+		OnOpcode:          h.onOpcode,
 		OnFault:           h.onFault,
 		OnGasChange:       nil,
 		OnBlockchainInit:  nil,
@@ -145,7 +151,7 @@ func NewHost(logger log.Logger, fs *foundry.ArtifactsFS, executionContext Contex
 		OnNonceChange:     nil,
 		OnCodeChange:      nil,
 		OnStorageChange:   nil,
-		OnLog:             nil,
+		OnLog:             h.onLog,
 	}
 
 	vmCfg := vm.Config{
@@ -212,6 +218,11 @@ func (h *Host) getPrecompile(rules params.Rules, original vm.PrecompiledContract
 		return h.cheatcodes // nil if cheats are not enabled
 	case ConsoleAddr:
 		return h.console // nil if cheats are not enabled
+	// TODO: check if in prank-mode
+	//  if yes, then use the prank-precompile.
+	//  The prank precompile can then change the caller, and do the actual call/create/whatever.
+	//
+
 	// TODO: we can attach configurations this way, and directly provide reads for
 	// TODO: we can override Artifacts.s.sol, to remember deployments
 	default:
@@ -248,6 +259,27 @@ func (h *Host) onExit(depth int, output []byte, gasUsed uint64, err error, rever
 
 func (h *Host) onFault(pc uint64, op byte, gas, cost uint64, scope tracing.OpContext, depth int, err error) {
 	h.log.Warn("Fault", "addr", scope.Address(), "err", err)
+}
+
+func (h *Host) onOpcode(pc uint64, op byte, gas, cost uint64, scope tracing.OpContext, rData []byte, depth int, err error) {
+	// TODO: check if SLOAD/SSTORE, for storage access tracking
+
+	if h.scope == scope { // ignore if we already entered this scope
+		return
+	}
+	// TODO: unwind old pranks
+	// TODO: check if prank left
+	// apply prank
+	scopeCtx := scope.(*vm.ScopeContext)
+	scopeCtx.Contract.CallerAddress = common.Address{}
+}
+
+func (h *Host) onStorageChange(addr common.Address, slot common.Hash, prev, new common.Hash) {
+	// TODO if storage recording
+}
+
+func (h *Host) onLog(log *types.Log) {
+	// TODO if log recording
 }
 
 func (h *Host) CurrentCall() CallFrame {
